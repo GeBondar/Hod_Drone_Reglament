@@ -910,6 +910,16 @@ ${text}
 
     try {
       docContent.innerHTML = marked.parse(cachedRegulationRaw);
+      var headings = docContent.querySelectorAll('h1, h2, h3, h4');
+      headings.forEach(function(h) {
+        var slug = h.textContent
+          .toLowerCase()
+          .replace(/[^a-zа-яё0-9\s-]/gi, '')
+          .trim()
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-');
+        h.id = slug;
+      });
       docViewer.scrollTop = 0;
     } catch (e) {
       docContent.innerHTML = '<p style="color:var(--danger)">Ошибка рендеринга регламента</p><pre>' + escapeHtml(cachedRegulationRaw) + '</pre>';
@@ -1066,6 +1076,20 @@ ${text}
       }).catch(function() {
         showError('Не удалось скопировать');
       });
+    }
+  });
+
+  // Handle in-document anchor links
+  docContent.addEventListener('click', function(e) {
+    var a = e.target.closest('a');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (href && href.startsWith('#')) {
+      e.preventDefault();
+      var target = document.getElementById(href.slice(1));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   });
 
