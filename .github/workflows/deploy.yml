@@ -24,9 +24,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject API key
+      - name: Inject secrets
         run: |
           sed -i "s|__OPENROUTER_API_KEY__|${{ secrets.OPENROUTER_API_KEY }}|g" docs/index.html
+          sed -i "s|__WORKER_URL__|${{ secrets.WORKER_URL }}|g" docs/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

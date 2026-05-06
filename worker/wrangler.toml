@@ -1,0 +1,5 @@
+name = "hod-drone-proxy"
+main = "worker.js"
+compatibility_date = "2025-05-07"
+
+# Free tier: 100,000 requests/day included
