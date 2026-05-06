@@ -308,7 +308,7 @@ header h1 span { color: var(--accent2); }
     <div class="form-group">
       <label>Модель</label>
       <select id="modelSelect">
-        <option value="x-ai/grok-4.1-fast:free">Grok 4.1 Fast (бесплатно)</option>
+        <option value="x-ai/grok-4.1-fast">Grok 4.1 Fast (бесплатно)</option>
         <option value="deepseek/deepseek-chat-v3">DeepSeek Chat V3 (бесплатно)</option>
         <option value="deepseek/deepseek-r1">DeepSeek R1 (бесплатно)</option>
       </select>
@@ -756,7 +756,7 @@ ${text}
     if (!settings) {
       settings = {
         apiKey: '__OPENROUTER_API_KEY__',
-        model: 'x-ai/grok-4.1-fast:free'
+        model: 'x-ai/grok-4.1-fast'
       };
     }
     apiKeyInput.value = settings.apiKey || '';
