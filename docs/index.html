@@ -192,10 +192,53 @@ header h1 span { color: var(--accent2); }
 .error-banner.show { display: block; }
 
 @media (max-width: 600px) {
-  header h1 { font-size: 15px; }
-  .msg-bubble { max-width: 92%; }
+  body { overflow: hidden; }
+  header {
+    flex-wrap: wrap; padding: 8px 12px; gap: 6px;
+  }
+  header h1 { font-size: 14px; }
+  .header-actions { gap: 6px; flex-wrap: wrap; }
   .model-badge { display: none; }
-  .nav-btn { font-size: 12px; padding: 4px 10px; }
+  .nav-btn { font-size: 12px; padding: 5px 10px; }
+  .icon-btn { width: 32px; height: 32px; font-size: 14px; }
+
+  .messages { padding: 10px; gap: 8px; }
+  .msg-bubble { max-width: 95%; padding: 8px 12px; font-size: 13px; }
+  .msg-label { font-size: 10px; }
+  .welcome { padding: 20px 10px; }
+  .welcome h2 { font-size: 17px; }
+  .welcome p { font-size: 13px; }
+  .welcome .hints { gap: 6px; }
+  .welcome .hint { font-size: 12px; padding: 5px 10px; }
+
+  .input-container { padding: 8px 10px; gap: 6px; }
+  .input-container textarea { font-size: 16px; padding: 10px; }
+  .send-btn { width: 40px; height: 40px; font-size: 16px; }
+
+  .settings-panel { width: 96%; padding: 16px; border-radius: 10px; }
+  .settings-panel h2 { font-size: 15px; }
+  .form-group label { font-size: 12px; }
+  .form-group input, .form-group select { font-size: 16px; padding: 10px; }
+
+  .error-banner { margin: 6px 10px; font-size: 12px; padding: 6px 10px; }
+
+  .doc-content { padding: 12px 14px; font-size: 13px; }
+  .doc-content h1 { font-size: 18px; margin: 16px 0 8px; }
+  .doc-content h2 { font-size: 15px; margin: 14px 0 6px; }
+  .doc-content h3 { font-size: 13px; }
+  .doc-content table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
+  .doc-content th, .doc-content td { padding: 4px 6px; }
+  .doc-content pre { padding: 10px; font-size: 12px; }
+
+  .typing span { width: 5px; height: 5px; }
+}
+
+@media (max-width: 380px) {
+  header { padding: 6px 8px; }
+  header h1 { font-size: 13px; }
+  .nav-btn { font-size: 11px; padding: 4px 8px; }
+  .icon-btn { width: 28px; height: 28px; font-size: 12px; }
+  .doc-content { padding: 10px; font-size: 12px; }
 }
 
 /* Navigation buttons */
