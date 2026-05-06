@@ -845,6 +845,41 @@ ${text}
     setTimeout(function() { el.remove(); }, 4000);
   }
 
+  function switchToNextModel(reason) {
+    if (!originalMessage) return false;
+    var curIdx = FALLBACK_MODELS.indexOf(settings.model);
+    var nextIdx = curIdx >= 0 ? (curIdx + 1) % FALLBACK_MODELS.length : 0;
+    if (nextIdx === curIdx && FALLBACK_MODELS.length <= 1) return false;
+    var newModel = FALLBACK_MODELS[nextIdx];
+    var oldName = settings.model.split('/').pop().replace(/:free$/, '');
+    var newName = newModel.split('/').pop().replace(/:free$/, '');
+    settings.model = newModel;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    updateBadge();
+    modelSelect.value = newModel;
+    var note = '🔄 ' + oldName + ' → **' + newName + '** (' + reason + ')';
+    showToast(note);
+    appendChatNote(note);
+    removeTyping();
+    isWaiting = false;
+    sendBtn.disabled = false;
+    userInput.value = originalMessage;
+    originalMessage = null;
+    sendMessage();
+    return true;
+  }
+
+  function appendChatNote(text) {
+    welcomeEl.style.display = 'none';
+    var div = document.createElement('div');
+    div.className = 'message ai';
+    div.innerHTML = '<div class="msg-label">Система</div>' +
+      '<div class="msg-bubble" style="background:rgba(108,92,231,0.15);border-color:var(--accent);font-size:12px;">' + simpleMarkdownToHtml(text) + '</div>';
+    messagesEl.appendChild(div);
+    scrollDown();
+    saveChatHistory();
+  }
+
   function loadSettings() {
     try {
       settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
@@ -1057,6 +1092,9 @@ ${text}
     const typingEl = appendTyping();
 
     try {
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function() { controller.abort(); }, 60000);
+
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -1074,8 +1112,11 @@ ${text}
           stream: true,
           max_tokens: 2048,
           temperature: 0.3
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         var errData = await response.json().catch(function() { return {}; });
@@ -1089,22 +1130,7 @@ ${text}
         }
 
         var isTokenLimit = /token|limit|context|exceed|length|too long|too many/i.test(errMsg);
-        if (isTokenLimit && originalMessage) {
-          removeTyping();
-          var curIdx = FALLBACK_MODELS.indexOf(settings.model);
-          var nextIdx = curIdx >= 0 ? (curIdx + 1) % FALLBACK_MODELS.length : 0;
-          var newModel = FALLBACK_MODELS[nextIdx];
-          settings.model = newModel;
-          localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-          updateBadge();
-          modelSelect.value = newModel;
-          var modelName = newModel.split('/').pop().replace(/:free$/, '');
-          showToast('🔄 Переключено на ' + modelName + ' (лимит токенов)');
-          isWaiting = false;
-          sendBtn.disabled = false;
-          userInput.value = originalMessage;
-          originalMessage = null;
-          sendMessage();
+        if (isTokenLimit && switchToNextModel('лимит токенов')) {
           return;
         }
 
@@ -1145,13 +1171,22 @@ ${text}
       }
       saveChatHistory();
     } catch (e) {
+      clearTimeout(timeoutId);
       removeTyping();
-      originalMessage = null;
       var msg = e.message || 'Неизвестная ошибка';
+      var isTimeout = e.name === 'AbortError';
+
+      if (isTimeout) {
+        msg = 'Таймаут: модель не ответила за 60 секунд';
+      }
+
+      if (switchToNextModel(isTimeout ? 'таймаут 60с' : 'ошибка: ' + msg)) {
+        return;
+      }
+
+      originalMessage = null;
       showError(msg);
       appendMessage('ai', '❌ Ошибка: ' + escapeHtml(msg));
-      saveChatHistory();
-      updateBadge();
       saveChatHistory();
       updateBadge();
     } finally {
