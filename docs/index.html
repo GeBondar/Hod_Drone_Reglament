@@ -971,6 +971,11 @@ ${text}
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem(SETTINGS_KEY);
+          settings = null;
+          loadSettings();
+        }
         throw new Error(errData.error?.message || 'HTTP ' + response.status + ' ' + response.statusText);
       }
 
@@ -1010,9 +1015,10 @@ ${text}
     } catch (e) {
       removeTyping();
       const msg = e.message || 'Неизвестная ошибка';
-      showError(msg);
-      appendMessage('ai', '❌ Ошибка: ' + escapeHtml(msg));
+      showError(msg + ' — сохранённый ключ сброшен, попробуйте ещё раз');
+      appendMessage('ai', '❌ Ошибка: ' + escapeHtml(msg) + '\n\nСохранённый API-ключ сброшен. Отправьте вопрос ещё раз.');
       saveChatHistory();
+      updateBadge();
     } finally {
       isWaiting = false;
       sendBtn.disabled = false;
