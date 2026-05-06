@@ -890,7 +890,7 @@ ${text}
     } catch (e) { /* ignore */ }
     if (!settings) {
       settings = {
-        apiKey: '__OPENROUTER_API_KEY__',
+        apiKey: USE_PROXY ? '' : '__OPENROUTER_API_KEY__',
         model: 'openai/gpt-oss-20b:free'
       };
     }

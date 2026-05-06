@@ -26,8 +26,13 @@ jobs:
 
       - name: Inject secrets
         run: |
-          sed -i "s|__OPENROUTER_API_KEY__|${{ secrets.OPENROUTER_API_KEY }}|g" docs/index.html
-          sed -i "s|__WORKER_URL__|${{ secrets.WORKER_URL }}|g" docs/index.html
+          WORKER_URL="${{ secrets.WORKER_URL }}"
+          if [ -n "$WORKER_URL" ]; then
+            sed -i "s|__OPENROUTER_API_KEY__||g" docs/index.html
+          else
+            sed -i "s|__OPENROUTER_API_KEY__|${{ secrets.OPENROUTER_API_KEY }}|g" docs/index.html
+          fi
+          sed -i "s|__WORKER_URL__|$WORKER_URL|g" docs/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
