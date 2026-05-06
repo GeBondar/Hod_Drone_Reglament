@@ -869,7 +869,7 @@ ${text}
     sendBtn.disabled = false;
     userInput.value = originalMessage;
     originalMessage = null;
-    sendMessage();
+    setTimeout(function() { sendMessage(); }, 1000);
     return true;
   }
 
@@ -1176,7 +1176,11 @@ ${text}
         }
       }
       if (!fullText) {
-        bubble.innerHTML = '_(пустой ответ от модели)_';
+        removeTyping();
+        if (switchToNextModel('пустой ответ')) {
+          return;
+        }
+        appendMessage('ai', '_(пустой ответ от модели)_');
       }
       saveChatHistory();
     } catch (e) {
