@@ -308,10 +308,19 @@ header h1 span { color: var(--accent2); }
     <div class="form-group">
       <label>Модель</label>
       <select id="modelSelect">
+        <option value="google/gemma-4-31b-it:free">Gemma 4 31B (быстрейший, бесплатно)</option>
+        <option value="google/gemma-4-26b-a4b-it:free">Gemma 4 26B A4B (бесплатно)</option>
+        <option value="openai/gpt-oss-120b:free">OpenAI GPT-OSS 120B (бесплатно)</option>
         <option value="nvidia/nemotron-3-super-120b-a12b:free">Nemotron 3 Super 120B (бесплатно)</option>
-        <option value="baidu/cobuddy:free">Baidu Cobuddy (бесплатно)</option>
         <option value="deepseek/deepseek-chat-v3">DeepSeek Chat V3 (бесплатно)</option>
         <option value="deepseek/deepseek-r1">DeepSeek R1 (бесплатно)</option>
+        <option value="openai/gpt-oss-20b:free">OpenAI GPT-OSS 20B (бесплатно)</option>
+        <option value="nvidia/nemotron-nano-9b-v2:free">Nemotron Nano 9B V2 (бесплатно)</option>
+        <option value="baidu/cobuddy:free">Baidu CoBuddy (бесплатно)</option>
+        <option value="minimax/minimax-m2.5:free">MiniMax M2.5 (бесплатно)</option>
+        <option value="tencent/hy3-preview:free">Tencent Hy3 Preview (бесплатно)</option>
+        <option value="z-ai/glm-4.5-air:free">GLM 4.5 Air (бесплатно)</option>
+        <option value="poolside/laguna-m.1:free">Poolside Laguna M.1 (бесплатно)</option>
       </select>
       <div class="hint">Выберите из списка или впишите свой model ID</div>
     </div>
@@ -757,7 +766,7 @@ ${text}
     if (!settings) {
       settings = {
         apiKey: '__OPENROUTER_API_KEY__',
-        model: 'nvidia/nemotron-3-super-120b-a12b:free'
+        model: 'google/gemma-4-31b-it:free'
       };
     }
     apiKeyInput.value = settings.apiKey || '';
