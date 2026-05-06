@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Регламент «Ход дрона» — Поиск</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1b23;
+  --surface2: #24252e;
+  --border: #2d2e38;
+  --text: #e1e1e6;
+  --text2: #a0a0b0;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --user-bg: #2d2b3a;
+  --ai-bg: #1a1b23;
+  --danger: #e74c3c;
+  --success: #2ecc71;
+  --radius: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text);
+  height: 100vh; overflow: hidden;
+}
+.app { display: flex; flex-direction: column; height: 100vh; max-width: 900px; margin: 0 auto; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px; background: var(--surface);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+header h1 { font-size: 18px; font-weight: 600; }
+header h1 span { color: var(--accent2); }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.model-badge {
+  font-size: 11px; padding: 4px 8px; border-radius: 6px;
+  background: var(--surface2); color: var(--text2); border: 1px solid var(--border);
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: background 0.2s;
+}
+.icon-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+.messages {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.messages::-webkit-scrollbar { width: 6px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.welcome {
+  text-align: center; padding: 40px 20px; color: var(--text2);
+}
+.welcome h2 { font-size: 20px; color: var(--text); margin-bottom: 8px; }
+.welcome p { font-size: 14px; line-height: 1.6; }
+.welcome .hints { margin-top: 16px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.welcome .hint {
+  padding: 6px 14px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s;
+}
+.welcome .hint:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.message { display: flex; flex-direction: column; max-width: 100%; }
+.message.user { align-items: flex-end; }
+.message.ai { align-items: flex-start; }
+.msg-label {
+  font-size: 11px; color: var(--text2); margin-bottom: 3px;
+  padding: 0 4px;
+}
+.msg-bubble {
+  padding: 10px 14px; border-radius: var(--radius); line-height: 1.55;
+  font-size: 14px; word-break: break-word; max-width: 85%;
+}
+.message.user .msg-bubble { background: var(--user-bg); border: 1px solid var(--border); }
+.message.ai .msg-bubble { background: var(--ai-bg); border: 1px solid var(--border); }
+.msg-bubble p { margin-bottom: 8px; }
+.msg-bubble p:last-child { margin-bottom: 0; }
+.msg-bubble ul, .msg-bubble ol { margin: 8px 0; padding-left: 20px; }
+.msg-bubble li { margin-bottom: 4px; }
+.msg-bubble code {
+  background: var(--surface2); padding: 2px 6px; border-radius: 4px;
+  font-size: 13px; font-family: 'Fira Code', 'Cascadia Code', monospace;
+}
+.msg-bubble pre {
+  background: var(--surface2); padding: 12px; border-radius: 8px;
+  overflow-x: auto; margin: 8px 0; font-size: 13px;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+}
+.msg-bubble pre code { background: none; padding: 0; }
+.msg-bubble table { border-collapse: collapse; margin: 8px 0; font-size: 13px; width: 100%; }
+.msg-bubble th, .msg-bubble td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.msg-bubble th { background: var(--surface2); font-weight: 600; }
+.msg-bubble blockquote {
+  border-left: 3px solid var(--accent); padding-left: 12px; margin: 8px 0;
+  color: var(--text2); font-style: italic;
+}
+.msg-bubble strong { color: var(--accent2); }
+.msg-bubble em { font-style: italic; }
+.msg-bubble h1, .msg-bubble h2, .msg-bubble h3 { margin: 12px 0 6px; color: var(--text); }
+.msg-bubble h1 { font-size: 18px; } .msg-bubble h2 { font-size: 16px; } .msg-bubble h3 { font-size: 15px; }
+.msg-bubble hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+.msg-actions { margin-top: 4px; display: flex; gap: 6px; }
+.msg-actions button {
+  background: none; border: none; color: var(--text2); cursor: pointer;
+  font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: color 0.2s;
+}
+.msg-actions button:hover { color: var(--text); }
+
+.typing { display: flex; gap: 4px; padding: 10px 14px; align-items: center; }
+.typing span {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  animation: bounce 1.4s infinite ease-in-out;
+}
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+}
+
+.input-container {
+  display: flex; gap: 8px; padding: 12px 16px;
+  background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.input-container textarea {
+  flex: 1; padding: 10px 14px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 14px; font-family: inherit;
+  resize: none; min-height: 44px; max-height: 120px; line-height: 1.5;
+}
+.input-container textarea:focus { outline: none; border-color: var(--accent); }
+.input-container textarea::placeholder { color: var(--text2); }
+.send-btn {
+  width: 44px; height: 44px; border-radius: var(--radius);
+  border: none; background: var(--accent); color: #fff; cursor: pointer;
+  font-size: 18px; display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s; flex-shrink: 0; align-self: flex-end;
+}
+.send-btn:hover { background: #5a4bd1; }
+.send-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+/* Settings overlay */
+.settings-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; visibility: hidden; opacity: 0; transition: all 0.2s;
+}
+.settings-overlay.open { visibility: visible; opacity: 1; }
+.settings-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; width: 90%; max-width: 480px;
+}
+.settings-panel h2 { margin-bottom: 16px; font-size: 16px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 4px; }
+.form-group input, .form-group select {
+  width: 100%; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 14px; font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+.form-group select { cursor: pointer; }
+.form-group .hint { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.form-group .hint a { color: var(--accent2); }
+.settings-actions { display: flex; gap: 8px; margin-top: 20px; }
+.btn {
+  padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+  font-size: 14px; font-family: inherit; transition: background 0.2s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #5a4bd1; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+.btn-danger:hover { background: var(--danger); color: #fff; }
+
+.error-banner {
+  background: #3d1f1f; color: #ff6b6b; padding: 8px 14px; margin: 8px 16px;
+  border-radius: 8px; font-size: 13px; display: none;
+}
+.error-banner.show { display: block; }
+
+@media (max-width: 600px) {
+  header h1 { font-size: 15px; }
+  .msg-bubble { max-width: 92%; }
+  .model-badge { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>♟ <span>Ход дрона</span> — Поиск по регламенту</h1>
+    <div class="header-actions">
+      <span class="model-badge" id="modelBadge">⚙️ Не настроен</span>
+      <button class="icon-btn" id="settingsBtn" title="Настройки">⚙️</button>
+      <button class="icon-btn" id="clearBtn" title="Очистить чат">🗑</button>
+    </div>
+  </header>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <main class="messages" id="messages">
+    <div class="welcome" id="welcome">
+      <h2>📋 Поиск по регламенту соревнования</h2>
+      <p>Задайте вопрос о регламенте «Ход дрона. Шахматные сражения гетерогенных роёв дронов» — и LLM-агент найдёт ответ, опираясь на текст документа.</p>
+      <div class="hints">
+        <span class="hint" data-q="Сколько этапов в соревновании?">Сколько этапов?</span>
+        <span class="hint" data-q="Какие критерии оценки финального этапа?">Критерии оценки</span>
+        <span class="hint" data-q="Какие требования к LLM-интеграции дронов?">LLM-интеграция</span>
+        <span class="hint" data-q="Какой состав команды?">Состав команды</span>
+        <span class="hint" data-q="Какие правила безопасности?">Правила безопасности</span>
+        <span class="hint" data-q="Опиши состав роя дронов">Состав роя</span>
+      </div>
+    </div>
+  </main>
+
+  <div class="input-container">
+    <textarea id="userInput" placeholder="Задайте вопрос по регламенту..." rows="1"></textarea>
+    <button class="send-btn" id="sendBtn" title="Отправить">➤</button>
+  </div>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-panel">
+    <h2>⚙️ Настройки</h2>
+    <div class="form-group">
+      <label>OpenRouter API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-or-v1-...">
+      <div class="hint">Бесплатно на <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
+    </div>
+    <div class="form-group">
+      <label>Модель</label>
+      <select id="modelSelect">
+        <option value="google/gemini-2.5-flash">Gemini 2.5 Flash (рекомендуется, бесплатно)</option>
+        <option value="deepseek/deepseek-chat-v3">DeepSeek Chat V3 (бесплатно)</option>
+        <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B (бесплатно)</option>
+        <option value="deepseek/deepseek-r1">DeepSeek R1 (бесплатно)</option>
+      </select>
+      <div class="hint">Выберите из списка или впишите свой model ID</div>
+    </div>
+    <div class="settings-actions">
+      <button class="btn btn-primary" id="saveSettings">💾 Сохранить</button>
+      <button class="btn btn-secondary" id="closeSettings">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Regulation text embedded safely -->
+<script type="text/plain" id="regulationText">
+# Регламент проведения соревнования
+
+## «Ход дрона. Шахматные сражения гетерогенных роёв дронов»
+
+<b>Москва, 2026</b>
+
+---
+
+## 1. Общие положения
+
+Настоящий Регламент проведения соревнования «Ход дрона. Шахматные сражения гетерогенных роёв дронов» (далее — **Регламент**) определяет порядок организации и проведения соревнования (далее — **Соревнование**).
+
+Соревнование является **очным техническим мероприятием** и проводится в соответствии с настоящим Регламентом.
+
+### 1.1. Предмет соревнования
+
+Предметом соревнования является **автономный шахматный поединок** между двумя гетерогенными роями дронов (летающих и наземных).
+
+- **Все дроны, оснащённые Raspberry Pi, в обязательном порядке укомплектовываются архитектурой OpenClaw и подключаются по API к любому провайдеру нейросетей (LLM).**
+- **Каждый дрон является агентом LLM.** Взаимодействие между агентами и коллективное принятие решений осуществляется через **облачную систему общения LLM-агентов** — социальную сеть для координации действий и выработки шахматной стратегии.
+- Все действия выполняются робототехническими аппаратами без непосредственного управления человеком в реальном времени (полностью автономно).
+
+### 1.2. Рабочий язык
+
+Рабочим языком соревнований является **русский язык**.
+
+---
+
+## 2. Цели соревнования
+
+Целями проведения Соревнования являются:
+
+1. Выявление перспективных специалистов в области программирования беспилотных летательных и наземных аппаратов с высоким уровнем квалификации, способных решать отраслевые задачи в интересах технологического развития Российской Федерации.
+2. Формирование профессионального сообщества, готового предлагать и реализовывать инновационные идеи в данной сфере.
+
+---
+
+## 3. Задачи соревнования
+
+Задачами проведения соревнования являются:
+
+- **Определение лучших специалистов и команд** в области разработки автономных роевых систем на основе результатов проведённых зачётных попыток.
+- **Выявление новых подходов и решений** задач автономного управления группой дронов, определение наиболее эффективных методов решения поставленных задач.
+- **Повышение интереса** молодых инженеров и программистов к разработке собственных проектов в сфере беспилотных летательных аппаратов и робототехнических систем, стимулирование обмена опытом и знаний между участниками.
+
+---
+
+## 4. Порядок организации соревнования
+
+### 4.1. Этапы проведения
+
+Соревнования проводятся в **2 этапа**:
+
+| Этап | Тип | Описание |
+|------|-----|----------|
+| **Заочный** | Квалификационный отбор | Команды самостоятельно выполняют задания, направленные на проверку компетенций. Материалы — в Приложении 2. |
+| **Очный** | Финальный | Прохождение конкурсных заданий с полным соблюдением условий на предоставленной специализированной площадке в течение **4 дней**. |
+
+### 4.2. Сроки и место проведения
+
+- **Год проведения:** 2026
+- **Место:** Инновационный центр «Сколково», г. Москва
+
+### 4.3. Участники
+
+| Параметр | Значение |
+|----------|----------|
+| Состав команды | от 4 до 10 человек |
+| Возраст участников | 14 лет и старше |
+| Максимальное количество команд | 4 (до 40 участников) |
+
+### 4.4. Система проведения
+
+Соревнование проводится по **олимпийской системе**: полуфиналы и финал.
+
+- **Дни 1–3:** тренировочный этап.
+- **День 4:** зачётные матчи.
+
+Расписание матчей и жеребьёвка доводятся до участников заранее.
+
+---
+
+## 5. Конкурсное задание
+
+### 5.1. Общее описание
+
+Командам необходимо разработать и продемонстрировать **автономное взаимодействие гетерогенного роевого комплекса** в формате шахматной партии.
+
+Каждая команда выставляет на поле **«рой»**, состоящий из **16 аппаратов**:
+
+| Тип аппарата | Шахматная фигура | Количество |
+|--------------|------------------|-------------|
+| Летающий дрон | Король, Ферзь, Слон, Конь | **6** (1 Король, 1 Ферзь, 2 Слона, 2 Коня) |
+| Ровер | Пешка | **8** |
+| Боевой ровер (с орудийной системой) | Ладья | **2** |
+
+### 5.2. Правила игры
+
+- Два роевых комплекса играют друг против друга партию в шахматы по **стандартным правилам** с физическим перемещением и «взятием» фигур.
+- **Основная цель** — поставить мат королю противника либо набрать больше очков к концу отведённого времени.
+
+### 5.3. Архитектура LLM-агентов (обязательное требование)
+
+Каждый дрон на базе Raspberry Pi функционирует как **LLM-агент** в составе роя. Обязательным является выполнение следующих требований:
+
+| Компонент | Требование |
+|-----------|------------|
+| **OpenClaw** | Установлен на каждом дроне с Raspberry Pi. Обеспечивает взаимодействие с LLM-провайдером через API. |
+| **API-подключение** | Каждый агент подключён к любому провайдеру нейросетей (OpenAI, Anthropic, DeepSeek, Gigachat, YandexGPT или иному) по стандартному API. |
+| **Облачная система общения LLM-агентов** | Социальная сеть для взаимодействия агентов роя: координация действий, выработка стратегии и коллективное принятие решений в реальном времени. |
+
+LLM-агенты анализируют визуальное состояние доски (через камеры дронов), обмениваются данными через облачную систему общения и автономно принимают шахматные решения без участия человека.
+
+---
+
+## 6. Порядок проведения соревнований
+
+### 6.1. Отборочный этап
+
+- Является квалификационным отбором.
+- Команды самостоятельно выполняют задания, направленные на проверку компетенций.
+- Описание заданий и материалы — в Приложении 2.
+
+### 6.2. Финальный этап
+
+#### Общие условия
+
+- Все команды работают в рамках **одного уровня сложности**, с одинаковыми условиями и составом оборудования.
+
+#### Тестовые попытки (дни 1–3)
+
+| Параметр | Значение |
+|----------|----------|
+| Количество попыток | Не ограничено |
+| Длительность одной попытки | до 10 минут |
+
+#### Зачётные матчи (день 4)
+
+- Проводятся **полуфиналы** и **финал**.
+- Каждый матч продолжается до **постановки мата** либо до истечения **лимита времени**.
+
+#### Требования во время матча
+
+- Аппараты должны быть размещены на назначенных стартовых позициях.
+- Пульт управления должен быть **включён** для аварийного перехвата.
+- На каждом БПЛА обязателен **KILL SWITCH**, продемонстрированный перед первым тестовым полётом.
+
+#### Протоколирование результатов
+
+- По завершении матча эксперты заносят результаты в протокол.
+- После подписания протокола капитаном команды подача апелляции **невозможна**.
+- Отказ от подписания — **основание для дисквалификации**.
+
+---
+
+## 7. Порядок судейства и критерии оценки. Финальный этап
+
+Судейство соревнований осуществляется **судейской коллегией** (не менее 3 человек) с обязательной **видеофиксацией**.
+
+> **Примечание:** Если во время тестовой или зачётной попытки БПЛА приходит в неисправное состояние, участник осуществляет ремонт самостоятельно, **время попытки не останавливается**.
+
+### 7.1. Критерии оценивания финального этапа
+
+| Критерий | Баллы |
+|----------|-------|
+| Правильное выполнение хода за отведённое время (1 мин.) | +1 за ход |
+| Захват пешки (ровера-пешки) | +10 |
+| Захват коня (дрона-коня) | +30 |
+| Захват слона (дрона-слона) | +30 |
+| Захват ладьи (боевого ровера-ладьи) | +50 |
+| Захват ферзя (дрона-ферзя) | +90 |
+| Мат королю противника | Победа |
+| Интеграция LLM для принятия решений (бонус) | +20 |
+
+### 7.2. Критерии оценивания отборочного этапа
+
+| Критерий | Баллы |
+|----------|-------|
+| Взлёт дрона со световой индикацией | 10 |
+| Корректность выполнения шахматных ходов | 40 |
+| Точность посадки дрона после каждого хода | 20 |
+| Устойчивое удержание позиции | 5 |
+| Возврат дрона на стартовую позицию | 10 |
+| Радужная индикация при посадке | 5 |
+| Полная автономность (от взлёта до посадки) | 10 |
+| **ИТОГО** | **100** |
+
+### 7.3. Порядок определения победителя
+
+**Отборочный этап (приоритет прохождения):**
+
+1. Команда, набравшая большее количество баллов.
+2. При равенстве баллов — команда с **меньшим временем** выполнения задания (по таймеру видео).
+3. При равенстве времени — команда с **более ранней датой подачи заявки**.
+
+**Финальный этап:**
+
+Победителем признаётся команда, набравшая наибольшее количество баллов по итогам **лучшей попытки** выполнения задания.
+
+При одинаковом количестве баллов победа присуждается команде, выполнившей лучшую попытку за **меньшее время**.
+
+---
+
+## 8. Порядок разрешения спорных вопросов
+
+- При возникновении спорных вопросов, не предусмотренных данным регламентом, разрешение производится **экспертной комиссией**.
+- В случае несогласия с решением экспертной комиссии допускается подача членом команды **апелляции** (форма — в Приложении 1).
+- Апелляция рассматривается **главным экспертом** соревнований, после чего им же выносится решение:
+  - О пересмотре результатов соревнования.
+  - Или об отклонении апелляции.
+
+---
+
+## 9. Технический регламент БПЛА
+
+### 9.1. Состав аппаратов команды
+
+| Тип аппарата | Количество | Шахматная фигура |
+|--------------|------------|-------------------|
+| Летающий дрон | 6 | Король, Ферзь, 2 Слона, 2 Коня |
+| Ровер-пешка | 8 | Пешка |
+| Боевой ровер-ладья | 2 | Ладья |
+| **Всего** | **16** | |
+
+### 9.2. Технические ограничения
+
+| Параметр | Ограничение |
+|----------|-------------|
+| Размеры аппарата | Не превышают размеры клетки (~0,5×0,5 м) |
+| Высота полёта дронов | ≤ 4 м |
+| Скорость полёта дронов | ≤ 2 м/с |
+| Скорость роверов | ≤ 1 м/с |
+
+### 9.3. Требования к аппаратам
+
+- **Автономность:** все аппараты работают автономно. Разрешено только экстренное вмешательство через **KILL SWITCH**.
+- **Failsafe:** каждый аппарат обязан иметь механизм отключения при потере сигнала.
+- **Маркировка:** все фигуры должны иметь маркировку (тип и сторона: белые/чёрные).
+- **Заряд:** перед каждым матчем — проверка заряда (не менее **40%**).
+- **Спиннеры боевых роверов** должны быть зафиксированы в неактивном состоянии вне матча.
+- **Техническая инспекция:** аппараты проходят техническую инспекцию до допуска к матчам.
+
+### 9.4. Запреты
+
+- Запрещён **обмен данными** между командами во время матча.
+
+### 9.5. Обязательные требования LLM-интеграции
+
+Каждый дрон с вычислительным модулем (Raspberry Pi) должен быть **LLM-агентом** и удовлетворять следующим требованиям:
+
+1. **OpenClaw** — архитектура развёрнута на каждом дроне с Raspberry Pi, обеспечивая стандартизированное взаимодействие с нейросетевыми провайдерами.
+2. **API-подключение** — каждый агент подключён по API к одному или нескольким провайдерам LLM на выбор команды. Провайдер может быть облачным (OpenAI, Anthropic, DeepSeek, Gigachat, YandexGPT и др.).
+3. **Облачная система общения LLM-агентов** — все агенты роя объединены в социальную сеть для:
+   - межагентного общения и координации;
+   - коллективного анализа игровой ситуации;
+   - выработки и согласования стратегии ходов;
+   - распределения ролей между аппаратами в реальном времени.
+
+---
+
+## 10. Технический регламент площадки проведения
+
+### 10.1. Полётная зона
+
+| Параметр | Значение |
+|----------|----------|
+| Форма | Куб из алюминиевых ферм |
+| Размеры (Д×Ш×В) | не менее 8×8×4 м |
+| Ограждение | Заградительная сетка |
+| Навигация | Поле ArUco-маркеров на полу (8×8, размер метки 30 см, шаг 50 см) |
+
+### 10.2. Рабочее место команды
+
+Каждой команде предоставляется следующее оборудование:
+
+| № | Оборудование | Количество |
+|----|--------------|-------------|
+| 1 | Платформа программируемого квадрокоптера «Сверх» | 6 шт. |
+| 2 | Платформа программируемого ровера «Сверх» | 8 шт. |
+| 3 | Платформа программируемого ровера «Сверх» с орудийной системой | 2 шт. |
+| 4 | Ноутбук | 3 шт. |
+| 5 | Зарядное устройство для ноутбука | 3 шт. |
+
+---
+
+## 11. Общие правила безопасности
+
+1. Каждый участник обязан быть ознакомлен с правилами техники безопасности перед началом работы на площадке.
+2. Участники должны соблюдать все инструкции организаторов, касающиеся безопасности.
+3. В полётной зоне могут находиться участники команды, выполняющей текущую попытку во время **подготовки** к полёту. Участникам **запрещается** находиться в полётной зоне во время выполнения полётов.
+4. Запрещается запуск БАС с установленными пропеллерами **вне полётной зоны**.
+5. Запрещается включение аккумуляторов с установленными пропеллерами.
+6. При выявлении неисправности БАС его эксплуатация **запрещена** до устранения неисправности. Участники обязаны сообщить о неисправности организаторам.
+7. Во время выполнения полётов пульт управления должен находиться рядом с участником и быть **включён** для возможности перехвата управления в случае внештатной ситуации.
+8. Участники обязаны соблюдать правила эксплуатации оборудования и использовать защитные средства (очки, перчатки).
+9. Запрещается использование неисправного оборудования. В случае обнаружения неисправности участники должны немедленно сообщить об этом организаторам.
+10. В случае возникновения внештатной ситуации (падение БАС, возгорание оборудования) участники обязаны немедленно сообщить об этом организаторам и следовать их инструкциям.
+11. Участники несут **полную ответственность** за соблюдение правил безопасности во время работы на площадке.
+12. Нарушение правил безопасности может привести к **штрафным санкциям** или **дисквалификации** команды.
+
+---
+
+## 12. Приложения
+
+### Приложение 1. Форма апелляции
+
+Главному эксперту соревнований «Ход дрона. Шахматные сражения гетерогенных роёв дронов»
+________________________ (Ф.И.О. заявителя)
+ID команды: ________________________
+
+**АПЕЛЛЯЦИЯ**
+
+Прошу Вас рассмотреть апелляцию в связи с тем, что участником/командой __________________________________ (Ф.И.О. человека / ID команды) был нарушен пункт правил № ____.
+
+Дата: ____________________
+Подпись: ____________________
+
+### Приложение 2. Задание заочного этапа
+
+#### Общее описание квалификационного задания
+
+В симуляторе **Gazebo** необходимо запрограммировать автономную миссию для роя дронов:
+
+1. **Автономный взлёт** с заданных начальных шахматных позиций (синяя световая индикация).
+2. **Выполнение трёх шахматных ходов:**
+   - Ход по прямой (ферзь)
+   - Диагональное перемещение (слон)
+   - Ход буквой «Г» (конь)
+   - После каждого хода — зависание **3 сек**.
+3. **Возврат на стартовую позицию и посадка.**
+
+#### Параметры симуляции
+
+| Параметр | Значение |
+|----------|----------|
+| Мир симуляции | Поле ArUco-меток |
+| Размер поля | 8×8 |
+| Размер метки | 30 см |
+| Шаг | 50 см |
+
+#### Требования к сдаче
+
+Результаты размещаются в **публичном репозитории GitHub**.
+
+---
+
+Регламент утверждён организаторами соревнования «Ход дрона. Шахматные сражения гетерогенных роёв дронов», Москва, 2026.
+</script>
+
+<script>
+(function() {
+  const fallbackText = document.getElementById('regulationText').textContent.trim();
+
+  const PROMPT_TEMPLATE = (text) => `Ты — интеллектуальный поисковый ассистент, специализирующийся на регламенте соревнования «Ход дрона. Шахматные сражения гетерогенных роёв дронов» (Москва, Сколково, 2026).
+
+Твоя задача — отвечать на вопросы пользователей, опираясь ИСКЛЮЧИТЕЛЬНО на текст регламента, приведённый ниже. Ты ДОЛЖЕН находить точную информацию в регламенте и ссылаться на конкретные разделы или пункты.
+
+Правила ответа:
+1. Всегда ссылайся на конкретный раздел/пункт регламента (например: «Согласно разделу 7.1...»).
+2. Цитируй ключевые фрагменты текста регламента.
+3. Отвечай строго на русском языке.
+4. Если ответа на вопрос нет в регламенте, честно сообщи об этом. НИКОГДА не придумывай информацию.
+5. Форматируй ответ с использованием markdown для лучшей читаемости.
+6. Будь кратким, но исчерпывающим.
+
+ТЕКСТ РЕГЛАМЕНТА:
+---
+${text}
+---`;
+
+  var SYSTEM_PROMPT = PROMPT_TEMPLATE(fallbackText);
+
+  const STORAGE_KEY = 'drone_reglament_chat';
+  const SETTINGS_KEY = 'drone_reglament_settings';
+
+  async function loadRegulation() {
+    const sources = [
+      'reglament_v02.md',
+      '../reglament_v02.md',
+      'reglament_v01.md',
+      '../reglament_v01.md'
+    ];
+    for (const url of sources) {
+      try {
+        const resp = await fetch(url);
+        if (resp.ok) {
+          const text = await resp.text();
+          if (text.length > 1000) {
+            SYSTEM_PROMPT = PROMPT_TEMPLATE(text);
+            console.log('Loaded regulation from:', url, '(' + text.length + ' chars)');
+            return;
+          }
+        }
+      } catch (e) { /* continue */ }
+    }
+    console.log('Using embedded fallback regulation text (' + fallbackText.length + ' chars)');
+  }
+
+  const messagesEl = document.getElementById('messages');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const settingsOverlay = document.getElementById('settingsOverlay');
+  const apiKeyInput = document.getElementById('apiKeyInput');
+  const modelSelect = document.getElementById('modelSelect');
+  const saveSettingsBtn = document.getElementById('saveSettings');
+  const closeSettingsBtn = document.getElementById('closeSettings');
+  const errorBanner = document.getElementById('errorBanner');
+  const modelBadge = document.getElementById('modelBadge');
+  const welcomeEl = document.getElementById('welcome');
+
+  let isWaiting = false;
+  let settings = null;
+
+  function loadSettings() {
+    try {
+      settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    } catch (e) { /* ignore */ }
+    if (!settings) {
+      settings = {
+        apiKey: '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',
+        model: 'google/gemini-2.5-flash'
+      };
+    }
+    apiKeyInput.value = settings.apiKey || '';
+    modelSelect.value = settings.model;
+    updateBadge();
+    if (settings.customModel) {
+      const option = document.createElement('option');
+      option.value = settings.customModel;
+      option.textContent = settings.customModel;
+      option.selected = true;
+      modelSelect.appendChild(option);
+    }
+  }
+
+  function saveSettings() {
+    settings.apiKey = apiKeyInput.value.trim();
+    settings.model = modelSelect.value;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    updateBadge();
+  }
+
+  function updateBadge() {
+    if (settings && settings.apiKey) {
+      const name = settings.model.split('/').pop();
+      modelBadge.textContent = '🤖 ' + name;
+      modelBadge.style.color = 'var(--success)';
+    } else {
+      modelBadge.textContent = '⚙️ API ключ не задан';
+      modelBadge.style.color = 'var(--danger)';
+    }
+  }
+
+  function hideError() { errorBanner.classList.remove('show'); }
+  function showError(msg) {
+    errorBanner.textContent = '⚠ ' + msg;
+    errorBanner.classList.add('show');
+    setTimeout(hideError, 8000);
+  }
+
+  function scrollDown() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+  function loadChatHistory() {
+    try {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (data && data.length) {
+        welcomeEl.style.display = 'none';
+        data.forEach(msg => appendMessage(msg.role, msg.content, false));
+        scrollDown();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function saveChatHistory() {
+    const msgs = [];
+    messagesEl.querySelectorAll('.message').forEach(el => {
+      const role = el.classList.contains('user') ? 'user' : 'ai';
+      const bubble = el.querySelector('.msg-bubble');
+      if (bubble) msgs.push({ role, content: bubble.innerHTML });
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(msgs));
+  }
+
+  function clearChat() {
+    messagesEl.querySelectorAll('.message, .typing-indicator').forEach(el => el.remove());
+    welcomeEl.style.display = '';
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  function appendMessage(role, content, save = true) {
+    welcomeEl.style.display = 'none';
+    const div = document.createElement('div');
+    div.className = 'message ' + role;
+    const label = role === 'user' ? 'Вы' : 'Ассистент';
+    div.innerHTML = '<div class="msg-label">' + label + '</div>' +
+      '<div class="msg-bubble">' + content + '</div>';
+    if (role === 'ai') {
+      const actions = document.createElement('div');
+      actions.className = 'msg-actions';
+      actions.innerHTML = '<button class="copy-btn">📋 Копировать</button>';
+      div.appendChild(actions);
+    }
+    messagesEl.appendChild(div);
+    scrollDown();
+    if (save) saveChatHistory();
+    return div;
+  }
+
+  function appendUserMessage(text) {
+    const escaped = escapeHtml(text);
+    appendMessage('user', escaped);
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function appendTyping() {
+    const div = document.createElement('div');
+    div.className = 'message ai typing-indicator';
+    div.innerHTML = '<div class="msg-label">Ассистент</div>' +
+      '<div class="msg-bubble typing"><span></span><span></span><span></span></div>';
+    messagesEl.appendChild(div);
+    scrollDown();
+    return div;
+  }
+
+  function removeTyping() {
+    const el = messagesEl.querySelector('.typing-indicator');
+    if (el) el.remove();
+  }
+
+  function simpleMarkdownToHtml(text) {
+    let html = text;
+    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/^---$/gm, '<hr>');
+    html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
+  async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text || isWaiting) return;
+
+    if (!settings || !settings.apiKey) {
+      showError('Введите OpenRouter API Key в настройках (кнопка ⚙️)');
+      settingsOverlay.classList.add('open');
+      return;
+    }
+
+    hideError();
+    isWaiting = true;
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    sendBtn.disabled = true;
+    appendUserMessage(text);
+    const typingEl = appendTyping();
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + settings.apiKey,
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Hod Drona Reglament Search'
+        },
+        body: JSON.stringify({
+          model: settings.model,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: text }
+          ],
+          stream: true,
+          max_tokens: 2048,
+          temperature: 0.3
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || 'HTTP ' + response.status + ' ' + response.statusText);
+      }
+
+      removeTyping();
+      const aiMsgEl = appendMessage('ai', '', false);
+      const bubble = aiMsgEl.querySelector('.msg-bubble');
+      let fullText = '';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullText += delta;
+              bubble.innerHTML = simpleMarkdownToHtml(fullText);
+              scrollDown();
+            }
+          } catch (e) { /* skip malformed chunks */ }
+        }
+      }
+      if (!fullText) {
+        bubble.innerHTML = '_(пустой ответ от модели)_';
+      }
+      saveChatHistory();
+    } catch (e) {
+      removeTyping();
+      const msg = e.message || 'Неизвестная ошибка';
+      showError(msg);
+      appendMessage('ai', '❌ Ошибка: ' + escapeHtml(msg));
+      saveChatHistory();
+    } finally {
+      isWaiting = false;
+      sendBtn.disabled = false;
+      userInput.focus();
+    }
+  }
+
+  // Event listeners
+  sendBtn.addEventListener('click', sendMessage);
+  userInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  userInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  settingsBtn.addEventListener('click', function() { settingsOverlay.classList.add('open'); });
+  closeSettingsBtn.addEventListener('click', function() { settingsOverlay.classList.remove('open'); });
+  settingsOverlay.addEventListener('click', function(e) {
+    if (e.target === settingsOverlay) settingsOverlay.classList.remove('open');
+  });
+  saveSettingsBtn.addEventListener('click', function() {
+    saveSettings();
+    settingsOverlay.classList.remove('open');
+    hideError();
+  });
+  clearBtn.addEventListener('click', function() {
+    if (confirm('Очистить всю историю чата?')) clearChat();
+  });
+
+  // Copy button delegation
+  messagesEl.addEventListener('click', function(e) {
+    if (e.target.classList.contains('copy-btn')) {
+      const bubble = e.target.closest('.message').querySelector('.msg-bubble');
+      const text = bubble.textContent;
+      navigator.clipboard.writeText(text).then(function() {
+        e.target.textContent = '✓ Скопировано';
+        setTimeout(function() { e.target.textContent = '📋 Копировать'; }, 2000);
+      }).catch(function() {
+        showError('Не удалось скопировать');
+      });
+    }
+  });
+
+  // Hint buttons
+  welcomeEl.addEventListener('click', function(e) {
+    if (e.target.classList.contains('hint')) {
+      const q = e.target.getAttribute('data-q');
+      if (q) {
+        userInput.value = q;
+        sendMessage();
+      }
+    }
+  });
+
+  // Init
+  loadSettings();
+  loadChatHistory();
+  hideError();
+  loadRegulation();
+})();
+</script>
+</body>
+</html>
