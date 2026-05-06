@@ -1127,10 +1127,10 @@ ${text}
           localStorage.removeItem(SETTINGS_KEY);
           settings = null;
           loadSettings();
+          throw new Error(errMsg);
         }
 
-        var isTokenLimit = /token|limit|context|exceed|length|too long|too many/i.test(errMsg);
-        if (isTokenLimit && switchToNextModel('лимит токенов')) {
+        if (switchToNextModel(errMsg)) {
           return;
         }
 
