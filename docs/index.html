@@ -193,6 +193,20 @@ header h1 span { color: var(--accent2); }
 }
 .error-banner.show { display: block; }
 
+/* Toast notification */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--accent);
+  padding: 10px 20px; border-radius: 20px; font-size: 13px;
+  z-index: 200; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  animation: toastIn 0.3s ease-out;
+  white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 @media (max-width: 600px) {
   header {
     flex-wrap: wrap; padding: 8px 12px; gap: 6px;
@@ -754,6 +768,22 @@ ${text}
   const STORAGE_KEY = 'drone_reglament_chat';
   const SETTINGS_KEY = 'drone_reglament_settings';
 
+  const FALLBACK_MODELS = [
+    'openai/gpt-oss-20b:free',
+    'deepseek/deepseek-chat-v3',
+    'openai/gpt-oss-120b:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'deepseek/deepseek-r1',
+    'baidu/cobuddy:free',
+    'google/gemma-4-31b-it:free',
+    'google/gemma-4-26b-a4b-it:free',
+    'nvidia/nemotron-nano-9b-v2:free',
+    'minimax/minimax-m2.5:free',
+    'tencent/hy3-preview:free',
+    'z-ai/glm-4.5-air:free',
+    'poolside/laguna-m.1:free'
+  ];
+
   async function loadRegulation() {
     const sources = [
       'reglament_v02.md',
@@ -803,6 +833,17 @@ ${text}
 
   let isWaiting = false;
   let settings = null;
+  let originalMessage = null;
+
+  function showToast(msg) {
+    var existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() { el.remove(); }, 4000);
+  }
 
   function loadSettings() {
     try {
@@ -1008,6 +1049,7 @@ ${text}
 
     hideError();
     isWaiting = true;
+    originalMessage = text;
     userInput.value = '';
     userInput.style.height = 'auto';
     sendBtn.disabled = true;
@@ -1036,13 +1078,37 @@ ${text}
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        if (response.status === 401 || response.status === 403) {
+        var errData = await response.json().catch(function() { return {}; });
+        var errMsg = errData.error?.message || 'HTTP ' + response.status;
+        var errCode = response.status;
+
+        if (errCode === 401 || errCode === 403) {
           localStorage.removeItem(SETTINGS_KEY);
           settings = null;
           loadSettings();
         }
-        throw new Error(errData.error?.message || 'HTTP ' + response.status + ' ' + response.statusText);
+
+        var isTokenLimit = /token|limit|context|exceed|length|too long|too many/i.test(errMsg);
+        if (isTokenLimit && originalMessage) {
+          removeTyping();
+          var curIdx = FALLBACK_MODELS.indexOf(settings.model);
+          var nextIdx = curIdx >= 0 ? (curIdx + 1) % FALLBACK_MODELS.length : 0;
+          var newModel = FALLBACK_MODELS[nextIdx];
+          settings.model = newModel;
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+          updateBadge();
+          modelSelect.value = newModel;
+          var modelName = newModel.split('/').pop().replace(/:free$/, '');
+          showToast('🔄 Переключено на ' + modelName + ' (лимит токенов)');
+          isWaiting = false;
+          sendBtn.disabled = false;
+          userInput.value = originalMessage;
+          originalMessage = null;
+          sendMessage();
+          return;
+        }
+
+        throw new Error(errMsg);
       }
 
       removeTyping();
@@ -1080,9 +1146,12 @@ ${text}
       saveChatHistory();
     } catch (e) {
       removeTyping();
-      const msg = e.message || 'Неизвестная ошибка';
-      showError(msg + ' — сохранённый ключ сброшен, попробуйте ещё раз');
-      appendMessage('ai', '❌ Ошибка: ' + escapeHtml(msg) + '\n\nСохранённый API-ключ сброшен. Отправьте вопрос ещё раз.');
+      originalMessage = null;
+      var msg = e.message || 'Неизвестная ошибка';
+      showError(msg);
+      appendMessage('ai', '❌ Ошибка: ' + escapeHtml(msg));
+      saveChatHistory();
+      updateBadge();
       saveChatHistory();
       updateBadge();
     } finally {
