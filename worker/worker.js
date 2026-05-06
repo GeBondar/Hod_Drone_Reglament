@@ -1,34 +1,36 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname + url.search;
 
-    // Build the upstream request to OpenRouter
-    const upstream = new Request(
-      `https://openrouter.ai${path}`,
-      {
-        method: request.method,
+    // Handle CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
-          'HTTP-Referer': request.headers.get('Origin') || 'https://gebondar.github.io',
-          'X-Title': 'Hod Drona Reglament'
-        },
-        body: request.body
-      }
-    );
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      });
+    }
 
-    let response = await fetch(upstream);
+    const targetUrl = `https://openrouter.ai${url.pathname}${url.search}`;
 
-    // Copy response with CORS headers
-    const headers = new Headers(response.headers);
+    const upstream = await fetch(targetUrl, {
+      method: request.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://gebondar.github.io',
+        'X-Title': 'Hod Drona Reglament'
+      },
+      body: request.body
+    });
+
+    const headers = new Headers(upstream.headers);
     headers.set('Access-Control-Allow-Origin', '*');
-    headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
+    return new Response(upstream.body, {
+      status: upstream.status,
       headers
     });
   }
